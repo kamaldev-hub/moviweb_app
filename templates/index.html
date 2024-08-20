@@ -3,20 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Users - MovieWeb App</title>
+    <title>MovieWeb App</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>Users</h1>
-        <ul>
-            {% for user in users %}
-                <li><a href="{{ url_for('user_movies', user_id=user.id) }}">{{ user.name }}</a></li>
-            {% endfor %}
-        </ul>
-        <a href="{{ url_for('add_user') }}" class="btn">Add User</a>
-        <a href="{{ url_for('home') }}" class="btn">Back to Home</a>
+        <h1>Welcome to MovieWeb App</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('list_users') }}">View Users</a></li>
+                <li><a href="{{ url_for('add_user') }}">Add User</a></li>
+            </ul>
+        </nav>
     </div>
 </body>
 </html>
