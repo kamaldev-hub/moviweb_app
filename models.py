@@ -23,6 +23,7 @@ class Movie(Base):
     year = Column(Integer)
     director = Column(String(100))
     rating = Column(Float)
+    poster = Column(String(300))
     user_id = Column(Integer, ForeignKey('users.id'))
     user = relationship("User", back_populates="movies")
     reviews = relationship("Review", back_populates="movie")

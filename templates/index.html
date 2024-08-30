@@ -1,21 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieWeb App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Welcome to MovieWeb App</h1>
-        <nav>
-            <ul>
-                <li><a href="{{ url_for('list_users') }}">View Users</a></li>
-                <li><a href="{{ url_for('add_user') }}">Add User</a></li>
-            </ul>
-        </nav>
+{% extends "base.html" %}
+
+{% block title %}Welcome to MovieWeb{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center; margin-top: 50px; font-size: 3em;">Welcome to MovieWeb</h1>
+<p style="text-align: center; margin-bottom: 50px;">Your personal movie collection manager</p>
+
+<div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 50px;">
+    <a href="{{ url_for('list_users') }}" class="btn">View Users</a>
+    <a href="{{ url_for('add_user') }}" class="btn">Add New User</a>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 0 20px;">
+    <div class="feature-card">
+        <h3>All Collections</h3>
+        <p>Manage multiple user collections</p>
     </div>
-</body>
-</html>
+    <div class="feature-card">
+        <h3>Add Movies</h3>
+        <p>Track your favorite films</p>
+    </div>
+    <div class="feature-card">
+        <h3>AI Reviews</h3>
+        <p>Get AI-powered movie reviews</p>
+    </div>
+    <div class="feature-card">
+        <h3>Movie Trivia</h3>
+        <p>Discover interesting movie facts</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feature-card {
+        background-color: var(--light-pastel);
+        padding: 20px;
+        text-align: center;
+    }
+    .feature-card h3 {
+        margin-top: 0;
+    }
+</style>
+{% endblock %}

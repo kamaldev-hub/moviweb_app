@@ -1,17 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Trivia for {{ movie.name }} - MovieWeb App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Movie Trivia for {{ movie.name }}</h1>
-        <p>{{ trivia }}</p>
-        <a href="{{ url_for('user_movies', user_id=movie.user_id) }}" class="btn">Back to User's Movies</a>
+{% extends "base.html" %}
+
+{% block title %}Trivia for {{ movie.name }} - MovieWeb{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center mb-4">Trivia for {{ movie.name }}</h1>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="card-title h4 mb-0">Did You Know?</h2>
+                </div>
+                <div class="card-body">
+                    {% if trivia %}
+                        <ol class="trivia-list">
+                            {% for fact in trivia %}
+                                <li class="trivia-item mb-3">
+                                    <p>{{ fact }}</p>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    {% else %}
+                        <p class="text-muted">No trivia available for this movie.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('user_movies', user_id=movie.user_id) }}" class="btn btn-secondary">Back to Movies</a>
+    </div>
+</div>
+
+<style>
+    .trivia-list {
+        padding-left: 20px;
+    }
+    .trivia-item {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .trivia-item p {
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}

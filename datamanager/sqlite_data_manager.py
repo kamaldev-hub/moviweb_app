@@ -1,101 +1,57 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from models import Base, User, Movie, Review
+import sqlite3
+from datamanager.data_manager_interface import DataManagerInterface
 
 
-class SQLiteDataManager:
-    def __init__(self, db_file_name):
-        self.engine = create_engine(f'sqlite:///{db_file_name}')
-        Base.metadata.create_all(self.engine)
-        self.Session = sessionmaker(bind=self.engine)
+class SQLiteDataManager(DataManagerInterface):
+    def __init__(self, db_file):
+        self.conn = sqlite3.connect(db_file, check_same_thread=False)
+        self.cursor = self.conn.cursor()
 
     def get_all_users(self):
-        session = self.Session()
-        users = session.query(User).all()
-        session.close()
-        return users
+        self.cursor.execute("SELECT * FROM users")
+        return [{'id': row[0], 'name': row[1]} for row in self.cursor.fetchall()]
 
     def get_user(self, user_id):
-        session = self.Session()
-        user = session.query(User).get(user_id)
-        session.close()
-        return user
+        self.cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        user = self.cursor.fetchone()
+        if user:
+            return {'id': user[0], 'name': user[1]}
+        return None
 
     def add_user(self, name):
-        session = self.Session()
-        new_user = User(name=name)
-        session.add(new_user)
-        session.commit()
-        session.close()
+        self.cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
+        self.conn.commit()
 
     def get_user_movies(self, user_id):
-        session = self.Session()
-        movies = session.query(Movie).filter_by(user_id=user_id).all()
-        session.close()
-        return movies
-
-    def add_movie(self, user_id, movie_data):
-        session = self.Session()
-        new_movie = Movie(user_id=user_id, **movie_data)
-        session.add(new_movie)
-        session.commit()
-        session.close()
+        self.cursor.execute("SELECT * FROM movies WHERE user_id = ?", (user_id,))
+        return [{'id': row[0], 'name': row[2], 'year': row[3], 'director': row[4], 'rating': row[5], 'poster': row[6]}
+                for row in self.cursor.fetchall()]
 
     def get_movie(self, movie_id):
-        session = self.Session()
-        movie = session.query(Movie).get(movie_id)
-        session.close()
-        return movie
+        self.cursor.execute("SELECT * FROM movies WHERE id = ?", (movie_id,))
+        movie = self.cursor.fetchone()
+        if movie:
+            return {'id': movie[0], 'user_id': movie[1], 'name': movie[2], 'year': movie[3], 'director': movie[4],
+                    'rating': movie[5], 'poster': movie[6]}
+        return None
+
+    def add_movie(self, user_id, movie_data):
+        query = '''INSERT INTO movies (user_id, name, year, director, rating, poster)
+                   VALUES (?, ?, ?, ?, ?, ?)'''
+        self.cursor.execute(query, (user_id, movie_data['name'], movie_data['year'],
+                                    movie_data['director'], movie_data['rating'], movie_data['poster']))
+        self.conn.commit()
 
     def update_movie(self, movie_id, movie_data):
-        session = self.Session()
-        movie = session.query(Movie).get(movie_id)
-        if movie:
-            for key, value in movie_data.items():
-                setattr(movie, key, value)
-            session.commit()
-        session.close()
+        query = '''UPDATE movies SET name = ?, year = ?, director = ?, rating = ?, poster = ?
+                   WHERE id = ?'''
+        self.cursor.execute(query, (movie_data['name'], movie_data['year'], movie_data['director'],
+                                    movie_data['rating'], movie_data['poster'], movie_id))
+        self.conn.commit()
 
     def delete_movie(self, movie_id):
-        session = self.Session()
-        movie = session.query(Movie).get(movie_id)
-        if movie:
-            session.delete(movie)
-            session.commit()
-        session.close()
+        self.cursor.execute("DELETE FROM movies WHERE id = ?", (movie_id,))
+        self.conn.commit()
 
-    def add_review(self, user_id, movie_id, review_text, rating):
-        session = self.Session()
-        new_review = Review(text=review_text, rating=rating, user_id=user_id, movie_id=movie_id)
-        session.add(new_review)
-        session.commit()
-        session.close()
-
-    def get_movie_reviews(self, movie_id):
-        session = self.Session()
-        reviews = session.query(Review).filter_by(movie_id=movie_id).all()
-        session.close()
-        return reviews
-
-    def get_review(self, review_id):
-        session = self.Session()
-        review = session.query(Review).get(review_id)
-        session.close()
-        return review
-
-    def update_review(self, review_id, review_text, rating):
-        session = self.Session()
-        review = session.query(Review).get(review_id)
-        if review:
-            review.text = review_text
-            review.rating = rating
-            session.commit()
-        session.close()
-
-    def delete_review(self, review_id):
-        session = self.Session()
-        review = session.query(Review).get(review_id)
-        if review:
-            session.delete(review)
-            session.commit()
-        session.close()
+    def close(self):
+        self.conn.close()

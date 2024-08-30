@@ -1,22 +1,37 @@
-from flask import Flask, render_template, request, redirect, url_for, abort
-from datamanager.sqlite_data_manager import SQLiteDataManager
+from flask import Flask, render_template, request, redirect, url_for, abort, jsonify
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models import Base, User, Movie, Review
 from datamanager.init_db import init_database
-from api import api  # Import the API blueprint
-import requests
+from api import api  # Import the Blueprint from the new api.py
+from ai_functions import get_movie_recommendations, generate_movie_review, generate_movie_trivia
+from movie_utils import fetch_movie_data
 import logging
+from dotenv import load_dotenv
+import os
+import traceback
+
+load_dotenv()
 
 app = Flask(__name__)
-app.register_blueprint(api, url_prefix='/api')  # Register the API blueprint
+app.register_blueprint(api, url_prefix='/api')
 app.static_folder = 'static'
 DB_FILE_NAME = 'moviwebapp.db'
-OMDB_API_KEY = 'c94f02ef'
 
-# Initialize the database and data manager
+# Initialize the database
 init_database(DB_FILE_NAME)
-data_manager = SQLiteDataManager(DB_FILE_NAME)
 
-# Set up logging to output to console
-logging.basicConfig(level=logging.INFO)
+# Set up SQLAlchemy
+engine = create_engine(f'sqlite:///{DB_FILE_NAME}')
+Session = sessionmaker(bind=engine)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[
+                        logging.FileHandler("app.log"),
+                        logging.StreamHandler()
+                    ])
 logger = logging.getLogger(__name__)
 
 
@@ -38,36 +53,54 @@ def home():
 @app.route('/users')
 def list_users():
     try:
-        users = data_manager.get_all_users()
+        session = Session()
+        users = session.query(User).all()
         return render_template('users.html', users=users)
     except Exception as e:
         logger.error(f"Error in list_users: {str(e)}")
+        logger.error(traceback.format_exc())
         abort(500)
+    finally:
+        session.close()
 
 
 @app.route('/users/<int:user_id>')
 def user_movies(user_id):
     try:
-        user = data_manager.get_user(user_id)
+        session = Session()
+        user = session.query(User).get(user_id)
         if user is None:
+            logger.warning(f"User not found: {user_id}")
             abort(404)
-        movies = data_manager.get_user_movies(user_id)
+        movies = user.movies
+        logger.info(f"Found {len(movies)} movies for user {user_id}")
+        for movie in movies:
+            logger.info(f"Movie: {movie.name}, Poster: {movie.poster}, Poster type: {type(movie.poster)}")
         return render_template('user_movies.html', user=user, movies=movies)
     except Exception as e:
         logger.error(f"Error in user_movies: {str(e)}")
+        logger.error(traceback.format_exc())
         abort(500)
+    finally:
+        session.close()
 
 
 @app.route('/add_user', methods=['GET', 'POST'])
 def add_user():
     if request.method == 'POST':
         try:
+            session = Session()
             name = request.form['name']
-            data_manager.add_user(name)
+            new_user = User(name=name)
+            session.add(new_user)
+            session.commit()
             return redirect(url_for('list_users'))
         except Exception as e:
             logger.error(f"Error in add_user: {str(e)}")
+            logger.error(traceback.format_exc())
             return render_template('add_user.html', error="An error occurred while adding the user.")
+        finally:
+            session.close()
     return render_template('add_user.html')
 
 
@@ -75,126 +108,153 @@ def add_user():
 def add_movie(user_id):
     if request.method == 'POST':
         try:
+            session = Session()
             movie_data = fetch_movie_data(request.form['title'], request.form['year'])
             if movie_data:
-                data_manager.add_movie(user_id, movie_data)
+                new_movie = Movie(
+                    name=movie_data['name'],
+                    year=movie_data['year'],
+                    director=movie_data['director'],
+                    rating=movie_data['rating'],
+                    poster=movie_data['poster'],
+                    user_id=user_id
+                )
+                session.add(new_movie)
+                session.commit()
+                logger.info(f"Added new movie: {new_movie.name}, Poster: {new_movie.poster}")
                 return redirect(url_for('user_movies', user_id=user_id))
             else:
                 return render_template('add_movie.html', user_id=user_id, error="Movie not found")
-        except requests.RequestException as e:
-            logger.error(f"Error in add_movie (API request): {str(e)}")
-            return render_template('add_movie.html', user_id=user_id,
-                                   error="An error occurred while fetching movie data.")
         except Exception as e:
             logger.error(f"Error in add_movie: {str(e)}")
+            logger.error(traceback.format_exc())
             return render_template('add_movie.html', user_id=user_id, error="An error occurred while adding the movie.")
+        finally:
+            session.close()
     return render_template('add_movie.html', user_id=user_id)
 
 
 @app.route('/users/<int:user_id>/update_movie/<int:movie_id>', methods=['GET', 'POST'])
 def update_movie(user_id, movie_id):
     try:
-        movie = data_manager.get_movie(movie_id)
+        session = Session()
+        movie = session.query(Movie).get(movie_id)
         if movie is None:
+            logger.warning(f"Movie not found: {movie_id}")
             abort(404)
         if request.method == 'POST':
-            movie_data = {
-                'name': request.form['title'],
-                'year': request.form['year'],
-                'director': request.form['director'],
-                'rating': request.form['rating']
-            }
-            data_manager.update_movie(movie_id, movie_data)
+            movie.name = request.form['title']
+            movie.year = int(request.form['year'])
+            movie.director = request.form['director']
+            movie.rating = float(request.form['rating'])
+            session.commit()
             return redirect(url_for('user_movies', user_id=user_id))
         return render_template('update_movie.html', user_id=user_id, movie=movie)
     except Exception as e:
         logger.error(f"Error in update_movie: {str(e)}")
+        logger.error(traceback.format_exc())
         abort(500)
+    finally:
+        session.close()
 
 
 @app.route('/users/<int:user_id>/delete_movie/<int:movie_id>')
 def delete_movie(user_id, movie_id):
     try:
-        data_manager.delete_movie(movie_id)
+        session = Session()
+        movie = session.query(Movie).get(movie_id)
+        if movie:
+            session.delete(movie)
+            session.commit()
         return redirect(url_for('user_movies', user_id=user_id))
     except Exception as e:
         logger.error(f"Error in delete_movie: {str(e)}")
+        logger.error(traceback.format_exc())
         abort(500)
+    finally:
+        session.close()
 
 
-@app.route('/movies/<int:movie_id>/reviews')
-def movie_reviews(movie_id):
+@app.route('/users/<int:user_id>/recommendations')
+def movie_recommendations(user_id):
     try:
-        movie = data_manager.get_movie(movie_id)
+        session = Session()
+        user = session.query(User).get(user_id)
+        if user is None:
+            logger.warning(f"User not found: {user_id}")
+            abort(404)
+        movies = user.movies
+        movie_titles = [movie.name for movie in movies]
+        recommendations = get_movie_recommendations(movie_titles)
+        return render_template('recommendations.html', user=user, recommendations=recommendations)
+    except Exception as e:
+        logger.error(f"Error in movie_recommendations: {str(e)}")
+        logger.error(traceback.format_exc())
+        abort(500)
+    finally:
+        session.close()
+
+
+@app.route('/movies/<int:movie_id>/review')
+def ai_movie_review(movie_id):
+    try:
+        session = Session()
+        movie = session.query(Movie).get(movie_id)
         if movie is None:
+            logger.warning(f"Movie not found: {movie_id}")
             abort(404)
-        reviews = data_manager.get_movie_reviews(movie_id)
-        return render_template('movie_reviews.html', movie=movie, reviews=reviews)
+        review = generate_movie_review(movie.name)
+        return render_template('ai_review.html', movie=movie, review=review)
     except Exception as e:
-        logger.error(f"Error in movie_reviews: {str(e)}")
+        logger.error(f"Error in ai_movie_review: {str(e)}")
+        logger.error(traceback.format_exc())
         abort(500)
+    finally:
+        session.close()
 
 
-@app.route('/users/<int:user_id>/movies/<int:movie_id>/add_review', methods=['GET', 'POST'])
-def add_review(user_id, movie_id):
-    if request.method == 'POST':
-        try:
-            review_text = request.form['review_text']
-            rating = float(request.form['rating'])
-            data_manager.add_review(user_id, movie_id, review_text, rating)
-            return redirect(url_for('movie_reviews', movie_id=movie_id))
-        except Exception as e:
-            logger.error(f"Error in add_review: {str(e)}")
-            return render_template('add_review.html', user_id=user_id, movie_id=movie_id,
-                                   error="An error occurred while adding the review.")
-    return render_template('add_review.html', user_id=user_id, movie_id=movie_id)
-
-
-@app.route('/reviews/<int:review_id>/update', methods=['GET', 'POST'])
-def update_review(review_id):
+@app.route('/movies/<int:movie_id>/trivia')
+def movie_trivia(movie_id):
     try:
-        review = data_manager.get_review(review_id)
-        if review is None:
+        session = Session()
+        movie = session.query(Movie).get(movie_id)
+        if movie is None:
+            logger.warning(f"Movie not found: {movie_id}")
             abort(404)
-        if request.method == 'POST':
-            review_text = request.form['review_text']
-            rating = float(request.form['rating'])
-            data_manager.update_review(review_id, review_text, rating)
-            return redirect(url_for('movie_reviews', movie_id=review.movie_id))
-        return render_template('update_review.html', review=review)
+        trivia = generate_movie_trivia(movie.name)
+        return render_template('movie_trivia.html', movie=movie, trivia=trivia)
     except Exception as e:
-        logger.error(f"Error in update_review: {str(e)}")
+        logger.error(f"Error in movie_trivia: {str(e)}")
+        logger.error(traceback.format_exc())
         abort(500)
+    finally:
+        session.close()
 
 
-@app.route('/reviews/<int:review_id>/delete')
-def delete_review(review_id):
+@app.route('/users/<int:user_id>/delete', methods=['POST'])
+def delete_user(user_id):
     try:
-        review = data_manager.get_review(review_id)
-        if review is None:
-            abort(404)
-        movie_id = review.movie_id
-        data_manager.delete_review(review_id)
-        return redirect(url_for('movie_reviews', movie_id=movie_id))
+        session = Session()
+        user = session.query(User).get(user_id)
+        if user is None:
+            logger.warning(f"User not found: {user_id}")
+            return redirect(url_for('list_users'))
+
+        # Delete all movies associated with the user
+        session.query(Movie).filter_by(user_id=user_id).delete()
+
+        # Delete the user
+        session.delete(user)
+        session.commit()
+        logger.info(f"User {user_id} and associated movies deleted successfully.")
+        return redirect(url_for('list_users'))
     except Exception as e:
-        logger.error(f"Error in delete_review: {str(e)}")
-        abort(500)
-
-
-def fetch_movie_data(title, year):
-    response = requests.get(f'http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={title}&y={year}')
-    movie_data = response.json()
-    if movie_data['Response'] == 'True':
-        return {
-            'name': movie_data['Title'],
-            'year': movie_data['Year'],
-            'director': movie_data['Director'],
-            'rating': movie_data['imdbRating']
-        }
-    return None
-
+        logger.error(f"Error in delete_user: {str(e)}")
+        logger.error(traceback.format_exc())
+        session.rollback()
+        return redirect(url_for('list_users'))
+    finally:
+        session.close()
 
 if __name__ == '__main__':
-    logger.info("Starting Flask app...")
-    logger.info("Please navigate to http://127.0.0.1:5000/ in your web browser")
     app.run(debug=True)

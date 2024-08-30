@@ -1,17 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Review for {{ movie.name }} - MovieWeb App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>AI Review for {{ movie.name }}</h1>
-        <p>{{ review }}</p>
-        <a href="{{ url_for('user_movies', user_id=movie.user_id) }}" class="btn">Back to User's Movies</a>
+{% extends "base.html" %}
+
+{% block title %}AI Review - {{ movie.name }} - MovieWeb{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>AI Review for {{ movie.name }}</h1>
+    <div class="ai-review">
+        {{ review }}
     </div>
-</body>
-</html>
+    <a href="{{ url_for('user_movies', user_id=movie.user_id) }}" class="btn">Back to Movies</a>
+</div>
+{% endblock %}

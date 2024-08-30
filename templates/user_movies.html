@@ -1,29 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ user.name }}'s Movies - MovieWeb App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>{{ user.name }}'s Movies</h1>
-        <ul>
-            {% for movie in movies %}
-                <li>
-                    {{ movie.name }} ({{ movie.year }}) - Directed by {{ movie.director }} - Rating: {{ movie.rating }}
-                    <a href="{{ url_for('update_movie', user_id=user.id, movie_id=movie.id) }}" class="btn">Update</a>
-                    <a href="{{ url_for('delete_movie', user_id=user.id, movie_id=movie.id) }}" class="btn">Delete</a>
-                    <a href="{{ url_for('ai_movie_review', movie_id=movie.id) }}" class="btn">AI Review</a>
-                    <a href="{{ url_for('movie_trivia', movie_id=movie.id) }}" class="btn">Movie Trivia</a>
-                </li>
-            {% endfor %}
-        </ul>
-        <a href="{{ url_for('add_movie', user_id=user.id) }}" class="btn">Add Movie</a>
-        <a href="{{ url_for('movie_recommendations', user_id=user.id) }}" class="btn">Get Movie Recommendations</a>
-        <a href="{{ url_for('list_users') }}" class="btn">Back to Users</a>
+{% extends "base.html" %}
+
+{% block title %}{{ user.name }}'s Movies - MovieWeb{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center; margin: 30px 0;">{{ user.name }}'s Movies</h1>
+
+<div class="movie-grid">
+    {% for movie in movies %}
+    <div class="movie-card">
+        {% if movie.poster and movie.poster != 'N/A' %}
+            <img src="{{ movie.poster }}" alt="{{ movie.name }} Poster" class="movie-poster">
+        {% else %}
+            <div class="no-poster">No poster</div>
+        {% endif %}
+        <h3>{{ movie.name }}</h3>
+        <p>{{ movie.year }} • {{ movie.director }}</p>
+        <p>★ {{ movie.rating }}/10</p>
+        <div class="button-group">
+            <a href="{{ url_for('update_movie', user_id=user.id, movie_id=movie.id) }}" class="btn">Update</a>
+            <a href="{{ url_for('delete_movie', user_id=user.id, movie_id=movie.id) }}" class="btn" onclick="return confirm('Are you sure you want to delete this movie?');">Delete</a>
+            <a href="{{ url_for('ai_movie_review', movie_id=movie.id) }}" class="btn" onclick="showLoading('review-btn-{{ movie.id }}')" id="review-btn-{{ movie.id }}">AI Review</a>
+            <a href="{{ url_for('movie_trivia', movie_id=movie.id) }}" class="btn" onclick="showLoading('trivia-btn-{{ movie.id }}')" id="trivia-btn-{{ movie.id }}">Trivia</a>
+        </div>
     </div>
-</body>
-</html>
+    {% endfor %}
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <a href="{{ url_for('add_movie', user_id=user.id) }}" class="btn">Add Movie</a>
+    <a href="{{ url_for('movie_recommendations', user_id=user.id) }}" class="btn">Get Recommendations</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .movie-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .movie-card {
+        background-color: var(--light-pastel);
+        padding: 10px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+    }
+    .movie-poster {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+    }
+    .no-poster {
+        height: 250px;
+        background-color: var(--light-pastel);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .movie-card h3 {
+        margin: 8px 0 4px 0;
+        font-size: 1em;
+    }
+    .movie-card p {
+        margin: 4px 0;
+        font-size: 0.8em;
+    }
+    .button-group {
+        display: grid;
+        gap: 4px;
+        margin-top: auto;
+    }
+    .movie-card .btn {
+        padding: 4px 8px;
+        font-size: 0.8em;
+    }
+    @media (max-width: 1200px) {
+        .movie-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    @media (max-width: 992px) {
+        .movie-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    @media (max-width: 768px) {
+        .movie-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 480px) {
+        .movie-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

@@ -3,75 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Review</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #1a1a2e;
-            color: #e94560;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: rgba(22, 33, 62, 0.8);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(233, 69, 96, 0.2);
-        }
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        textarea, input[type="number"] {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background-color: #16213e;
-            color: #e94560;
-        }
-        textarea {
-            height: 150px;
-            resize: vertical;
-        }
-        input[type="submit"] {
-            background-color: #e94560;
-            color: #16213e;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-        }
-        input[type="submit"]:hover {
-            background-color: #16213e;
-            color: #e94560;
-        }
-        .error {
-            color: #ff6b6b;
-            margin-bottom: 15px;
-        }
-    </style>
+    <title>Update Review - MovieWeb App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <header>
+        <nav>
+            <div class="logo">MovieWeb</div>
+            <div class="nav-links">
+                <a href="{{ url_for('home') }}">Home</a>
+                <a href="{{ url_for('list_users') }}">Users</a>
+                <a href="#">Random Movie</a>
+                <a href="#">Top Movies</a>
+            </div>
+            <div class="search-bar">
+                <input type="text" placeholder="Search movies...">
+                <button>🔍</button>
+            </div>
+        </nav>
+    </header>
     <div class="container">
-        <h1>Update Review</h1>
-        {% if error %}
-            <p class="error">{{ error }}</p>
-        {% endif %}
-        <form method="POST">
-            <textarea name="review_text" required>{{ review.text }}</textarea>
-            <input type="number" name="rating" min="0" max="10" step="0.1" value="{{ review.rating }}" required>
-            <input type="hidden" name="movie_id" value="{{ review.movie_id }}">
-            <input type="submit" value="Update Review">
+        <h1>Update Review for {{ movie.name }}</h1>
+        <form method="POST" class="form-container">
+            <textarea name="content" required>{{ review.content }}</textarea>
+            <input type="number" name="rating" value="{{ review.rating }}" min="1" max="10" required>
+            <button type="submit" class="btn">Update Review</button>
         </form>
+        <div class="button-group">
+            <a href="{{ url_for('movie_reviews', movie_id=movie.id) }}" class="btn">Back to Reviews</a>
+        </div>
     </div>
 </body>
 </html>

@@ -1,22 +1,115 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Users - MovieWeb App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Users</h1>
-        <ul>
-            {% for user in users %}
-                <li><a href="{{ url_for('user_movies', user_id=user.id) }}">{{ user.name }}</a></li>
-            {% endfor %}
-        </ul>
-        <a href="{{ url_for('add_user') }}" class="btn">Add User</a>
-        <a href="{{ url_for('home') }}" class="btn">Back to Home</a>
+{% extends "base.html" %}
+
+{% block title %}Users - MovieWeb{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center; margin: 30px 0;">MovieWeb Users</h1>
+<p style="text-align: center; margin-bottom: 30px;">Select a user to view their movie collection or manage users</p>
+
+<div class="user-grid">
+    {% for user in users %}
+    <div class="user-card-wrapper">
+        <div class="user-card">
+            <h3>{{ user.name }}</h3>
+            <div class="button-group">
+                <a href="{{ url_for('user_movies', user_id=user.id) }}" class="btn">View Collection</a>
+                <form action="{{ url_for('delete_user', user_id=user.id) }}" method="post">
+                    <button type="submit" class="btn" onclick="return confirm('Are you sure you want to delete {{ user.name }} and all their movies?');">
+                        Delete User
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+    {% endfor %}
+</div>
+
+<div class="add-user-container">
+    <a href="{{ url_for('add_user') }}" class="btn add-user-btn">Add New User</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 15px;
+        margin: 0 15px 70px;
+    }
+    .user-card-wrapper {
+        height: 150px; /* Feste Höhe für jede Karte */
+    }
+    .user-card {
+        background-color: var(--light-pastel);
+        padding: 15px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+    .user-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 1.1em;
+    }
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .user-card .btn,
+    .user-card form .btn {
+        padding: 6px 12px;
+        font-size: 0.85em;
+        width: 100%;
+        background-color: #9A928A;
+        color: white;
+        border: none;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+    .user-card form {
+        margin: 0;
+        width: 100%;
+    }
+    .add-user-container {
+        text-align: center;
+        margin-top: 30px;
+    }
+    .add-user-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        font-size: 1em;
+        background-color: #9A928A;
+        color: white;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    @media (max-width: 1200px) {
+        .user-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
+    @media (max-width: 992px) {
+        .user-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .user-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .user-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
