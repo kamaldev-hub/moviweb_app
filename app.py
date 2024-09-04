@@ -109,7 +109,7 @@ def add_movie(user_id):
     if request.method == 'POST':
         try:
             session = Session()
-            movie_data = fetch_movie_data(request.form['title'], request.form['year'])
+            movie_data = fetch_movie_data(request.form['title'])
             if movie_data:
                 new_movie = Movie(
                     name=movie_data['name'],
